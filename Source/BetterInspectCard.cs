@@ -145,7 +145,16 @@ namespace TKS_BetterInspectCard
             {
                 if (!statsToDraw.Any(sde => sde.stat == statDef))
                 {
-                    StatDrawEntry statDrawEntry = new StatDrawEntry(statDef.category, statDef.defName, statDef.ValueToString(statDef.Worker.GetValue(StatRequest.For(thing))), "", 3555, null, null, false, false);
+                    float statValue = statDef.Worker.GetValue(StatRequest.For(thing));
+
+                    //hide the same stats the vanilla info card hides: values at a stat's hideAtValue (e.g. 100% immunity gain speed
+                    //on every building) and default values for stats that don't show them
+                    if (Mathf.Approximately(statValue, statDef.hideAtValue) || (!statDef.showOnDefaultValue && statValue == statDef.defaultBaseValue))
+                    {
+                        continue;
+                    }
+
+                    StatDrawEntry statDrawEntry = new StatDrawEntry(statDef.category, statDef.defName, statDef.ValueToString(statValue), "", 3555, null, null, false, false);
                     statsToDraw.Add(statDrawEntry);
                 }
 
