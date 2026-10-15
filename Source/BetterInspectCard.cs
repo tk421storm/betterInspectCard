@@ -270,56 +270,52 @@ namespace TKS_BetterInspectCard
         }
     }
 
-    [HarmonyPatch(typeof(Plant))]
-    internal static class Plant_Patches
+    //the inspect pane builds its text in DrawInspectStringFor and draws it with DrawInspectString. we add our lines at that point
+    //rather than in GetInspectString, so they show for every thing class, including mod classes (e.g. Vanilla Plants Expanded
+    //plants) that override GetInspectString without calling base, and can't be changed by other mods afterwards
+    [HarmonyPatch(typeof(InspectPaneFiller))]
+    internal static class InspectPaneFiller_Patches
     {
+        //the thing whose inspect string is being drawn: set in DrawInspectStringFor, used and cleared in DrawInspectString
+        private static ThingWithComps drawingThing = null;
 
-        [HarmonyPatch(typeof(Plant), "GetInspectString")]
-        [HarmonyPostfix]
-        public static void GetInspectStringy_Postfix(ref string __result, Plant __instance)
+        [HarmonyPatch(typeof(InspectPaneFiller), "DrawInspectStringFor")]
+        [HarmonyPrefix]
+        public static void DrawInspectStringFor_Prefix(ISelectable sel)
         {
-            TKS_BetterInspectCard.DebugMessage("running inspect string postfix for " + __instance);
+            drawingThing = null;
 
-            __result = Utilities.AdjustInspectString(__result, __instance);
-
-        }
-    }
-
-    [HarmonyPatch(typeof(DeadPlant))]
-    internal static class DeadPlant_Patches
-    {
-
-        [HarmonyPatch(typeof(DeadPlant), "GetInspectString")]
-        [HarmonyPostfix]
-        public static void GetInspectStringy_Postfix(ref string __result, DeadPlant __instance)
-        {
-            TKS_BetterInspectCard.DebugMessage("running inspect string postfix for " + __instance);
-
-            __result = Utilities.AdjustInspectString(__result, __instance);
-
-        }
-    }
-
-    [HarmonyPatch(typeof(ThingWithComps))]
-    internal static class ThingWithComps_Patches
-    {
-
-        [HarmonyPatch(typeof(ThingWithComps), "GetInspectString")]
-        [HarmonyPostfix]
-        public static void GetInspectString_Postfix(ref string __result, ThingWithComps __instance)
-        {
-            
-            if (__instance.GetType()==typeof(Pawn))
+            //dont do pawns
+            if (sel is ThingWithComps thing && thing.GetType() != typeof(Pawn))
             {
-                //dont do pawns
+                drawingThing = thing;
+            }
+        }
+
+        //clear again in case DrawInspectString was never reached (e.g. another mod skipped the original), so the next
+        //DrawInspectString call (storage groups use it too) doesn't get our lines for the wrong thing
+        [HarmonyPatch(typeof(InspectPaneFiller), "DrawInspectStringFor")]
+        [HarmonyPostfix]
+        public static void DrawInspectStringFor_Postfix()
+        {
+            drawingThing = null;
+        }
+
+        [HarmonyPatch(typeof(InspectPaneFiller), "DrawInspectString")]
+        [HarmonyPrefix]
+        public static void DrawInspectString_Prefix(ref string str)
+        {
+            if (drawingThing == null)
+            {
                 return;
             }
-            
 
-            TKS_BetterInspectCard.DebugMessage("running inspect string postfix for " + __instance);
+            ThingWithComps thing = drawingThing;
+            drawingThing = null;
 
-            __result = Utilities.AdjustInspectString(__result, __instance);
+            TKS_BetterInspectCard.DebugMessage("adding favorited stats to inspect string for " + thing);
 
+            str = Utilities.AdjustInspectString(str, thing);
         }
     }
 }
