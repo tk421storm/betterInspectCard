@@ -32,7 +32,15 @@ namespace TKS_BetterInspectCard
     {
 
         private static Dictionary<string, string> statDrawEntryToLabelCache = new Dictionary<string, string>();
-        private static Dictionary<string, List<StatDrawEntry>> statDrawEntryCache = new Dictionary<string, List<StatDrawEntry>>();
+        //stats are cached per thing (the inspect string is built every frame) and rebuilt after this many seconds.
+        //real time rather than ticks, so values also refresh while paused. could be exposed as a setting
+        public static float statCacheRefreshSeconds = 1f;
+
+        //clear the cache once it holds this many things, so it doesn't grow over a long session
+        private const int statCacheMaxThings = 50;
+
+        //thingIDNumber : (realtime the stats were built, stats)
+        private static Dictionary<int, (float builtAt, List<StatDrawEntry> stats)> statDrawEntryCache = new Dictionary<int, (float builtAt, List<StatDrawEntry> stats)>();
 
         public static HashSet<string> GetFavoriteStatIDs()
         {
@@ -128,10 +136,12 @@ namespace TKS_BetterInspectCard
         private static List<StatDrawEntry> GetStatsToDraw(ThingWithComps thing)
         {
 
-            if (statDrawEntryCache.ContainsKey(thing.def.defName))
+            float now = Time.realtimeSinceStartup;
+
+            if (statDrawEntryCache.TryGetValue(thing.thingIDNumber, out var cached) && now - cached.builtAt < statCacheRefreshSeconds)
             {
-                TKS_BetterInspectCard.DebugMessage("Found cached stats for " + thing.def.defName);
-                return statDrawEntryCache[thing.def.defName];
+                TKS_BetterInspectCard.DebugMessage("Found cached stats for " + thing);
+                return cached.stats;
             }
 
             List<StatDrawEntry> statsToDraw = new List<StatDrawEntry>();
@@ -160,7 +170,12 @@ namespace TKS_BetterInspectCard
 
             }
 
-            statDrawEntryCache.Add(thing.def.defName, statsToDraw);
+            if (statDrawEntryCache.Count >= statCacheMaxThings)
+            {
+                statDrawEntryCache.Clear();
+            }
+
+            statDrawEntryCache[thing.thingIDNumber] = (now, statsToDraw);
 
             return statsToDraw;
         }
