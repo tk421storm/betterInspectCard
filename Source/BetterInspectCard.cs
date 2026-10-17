@@ -67,7 +67,10 @@ namespace TKS_BetterInspectCard
 
             if (statDrawEntryToLabelCache.ContainsKey(drawEntry))
             {
-                TKS_BetterInspectCard.DebugMessage("Found cached label for " + drawEntry + ": " + statDrawEntryToLabelCache[drawEntry]);
+                if (TKS_BetterInspectCard.DebugEnabled)
+                {
+                    TKS_BetterInspectCard.DebugMessage("Found cached label for " + drawEntry + ": " + statDrawEntryToLabelCache[drawEntry]);
+                }
                 return statDrawEntryToLabelCache[drawEntry];
             }
 
@@ -140,7 +143,10 @@ namespace TKS_BetterInspectCard
 
             if (statDrawEntryCache.TryGetValue(thing.thingIDNumber, out var cached) && now - cached.builtAt < statCacheRefreshSeconds)
             {
-                TKS_BetterInspectCard.DebugMessage("Found cached stats for " + thing);
+                if (TKS_BetterInspectCard.DebugEnabled)
+                {
+                    TKS_BetterInspectCard.DebugMessage("Found cached stats for " + thing);
+                }
                 return cached.stats;
             }
 
@@ -195,8 +201,11 @@ namespace TKS_BetterInspectCard
                 return inspectString;
             }
 
-            TKS_BetterInspectCard.DebugMessage("statsToDraw for " + thing + ": " + string.Join(", ", statsToDraw.Select(x=> x.Get_labelInt())));
-            TKS_BetterInspectCard.DebugMessage("favoriteStats for " + thing + ": " + string.Join(", ", GetFavoriteStatIDs()));
+            if (TKS_BetterInspectCard.DebugEnabled)
+            {
+                TKS_BetterInspectCard.DebugMessage("statsToDraw for " + thing + ": " + string.Join(", ", statsToDraw.Select(x=> x.Get_labelInt())));
+                TKS_BetterInspectCard.DebugMessage("favoriteStats for " + thing + ": " + string.Join(", ", GetFavoriteStatIDs()));
+            }
 
             foreach (StatDrawEntry statDef in statsToDraw)
             {
@@ -207,7 +216,10 @@ namespace TKS_BetterInspectCard
                 string statLabel = GetStatLabel(statDef);
                 if (statLabel != null)
                 {
-                    TKS_BetterInspectCard.DebugMessage("statDef " + statLabel + " is starred and should be promoted");
+                    if (TKS_BetterInspectCard.DebugEnabled)
+                    {
+                        TKS_BetterInspectCard.DebugMessage("statDef " + statLabel + " is starred and should be promoted");
+                    }
 
                     if (inspectString.Length!=0 && !inspectString.EndsWith("\n"))
                     {
@@ -237,11 +249,15 @@ namespace TKS_BetterInspectCard
 
     public class TKS_BetterInspectCard : Mod
     {
-        TKS_BetterInspectCardSettings settings;
+        static TKS_BetterInspectCardSettings settings;
+
+        //check this before building a debug string on a hot path (the inspect string is built every frame), so the
+        //string is only built when it will be printed
+        public static bool DebugEnabled => settings != null && settings.debugPrint;
 
         public static void DebugMessage(string message)
         {
-            if (LoadedModManager.GetMod<TKS_BetterInspectCard>().GetSettings<TKS_BetterInspectCardSettings>().debugPrint)
+            if (DebugEnabled)
             {
                 Log.Message(message);
             }
@@ -250,7 +266,7 @@ namespace TKS_BetterInspectCard
 
         public TKS_BetterInspectCard(ModContentPack content) : base(content)
         {
-            this.settings = GetSettings<TKS_BetterInspectCardSettings>();
+            settings = GetSettings<TKS_BetterInspectCardSettings>();
         }
 
         private string editBufferFloat;
@@ -313,7 +329,10 @@ namespace TKS_BetterInspectCard
             ThingWithComps thing = drawingThing;
             drawingThing = null;
 
-            TKS_BetterInspectCard.DebugMessage("adding favorited stats to inspect string for " + thing);
+            if (TKS_BetterInspectCard.DebugEnabled)
+            {
+                TKS_BetterInspectCard.DebugMessage("adding favorited stats to inspect string for " + thing);
+            }
 
             str = Utilities.AdjustInspectString(str, thing);
         }
