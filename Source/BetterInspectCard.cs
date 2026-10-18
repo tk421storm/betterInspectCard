@@ -157,7 +157,10 @@ namespace TKS_BetterInspectCard
                 statsToDraw.Add(statDrawEntry);
             }
 
-            foreach (StatDef statDef in DefDatabase<StatDef>.AllDefs.Where<StatDef>((Func<StatDef, bool>)(st => st.Worker.ShouldShowFor(StatRequest.For(thing)))))
+            //only starred stats are drawn, so skip the rest before working out their values (pawns have a lot of stats)
+            HashSet<string> favoriteStatIDs = GetFavoriteStatIDs();
+
+            foreach (StatDef statDef in DefDatabase<StatDef>.AllDefs.Where<StatDef>((Func<StatDef, bool>)(st => favoriteStatIDs.Contains(st.defName) && st.Worker.ShouldShowFor(StatRequest.For(thing)))))
             {
                 if (!statsToDraw.Any(sde => sde.stat == statDef))
                 {
@@ -301,8 +304,8 @@ namespace TKS_BetterInspectCard
         {
             drawingThing = null;
 
-            //dont do pawns
-            if (sel is ThingWithComps thing && thing.GetType() != typeof(Pawn))
+            //pawns too: vanilla draws a pawn's inspect string the same way, below its health and mood rows
+            if (sel is ThingWithComps thing)
             {
                 drawingThing = thing;
             }
